@@ -131,10 +131,16 @@ void App::menu_handler(size_t menu_id) {
         update_interfaces(false);
         stop_sshd();
     } else {
-        connected = menu_id;
         stop_sshd();
-        start_sshd(menu_id);
-        update_interfaces(true);
+        bool ok = start_sshd(menu_id);
+        if (ok) {
+            connected = menu_id;
+            update_interfaces(true);
+        } else {
+            connected = std::nullopt;
+            update_interfaces(false);
+            stop_sshd();
+        }
     }
 }
 
@@ -172,9 +178,10 @@ void App::stop_sshd() {
     exec(do_snprintf("pkill -f \"ssh -fN -D%s\"", port).c_str());
 }
 
-void App::start_sshd(size_t id) {
+bool App::start_sshd(size_t id) {
     auto &host = hosts[id];
-    exec(do_snprintf("ssh -fN -D%s %s", port, host).c_str());
+    auto result = exec(do_snprintf("ssh -fN -D%s %s", port, host).c_str());
+    return result.has_value();
 }
 
 void App::check_connection() {
@@ -188,8 +195,14 @@ void App::check_connection() {
 
     // reconnect
     stop_sshd();
-    start_sshd(*connected);
-    update_interfaces(true);
+    bool ok = start_sshd(*connected);
+    if (ok) {
+        update_interfaces(true);
+    } else {
+        connected = std::nullopt;
+        update_interfaces(false);
+        stop_sshd();
+    }
 }
 
 App::App(const char *port) : connected(std::nullopt), port(port), current(-1) {

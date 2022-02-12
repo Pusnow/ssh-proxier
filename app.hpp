@@ -20,7 +20,7 @@ class App {
     void init_interfaces();
     void update_interfaces(bool enable);
     void stop_sshd();
-    void start_sshd(size_t id);
+    bool start_sshd(size_t id);
     App(const char *port);
     static std::unique_ptr<App> inner;
     std::optional<size_t> connected;
