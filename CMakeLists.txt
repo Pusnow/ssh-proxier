@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.1.6)
+cmake_minimum_required(VERSION 3.6)
 project(
   ssh-proxier
   VERSION 0.1.0
