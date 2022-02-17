@@ -1,6 +1,7 @@
 #!/bin/sh
+set -ex
 
 mkdir -p build
-cd build || exit 1
+cd build 
 cmake -DCMAKE_BUILD_TYPE=Release ..
 make -j
