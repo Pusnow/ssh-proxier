@@ -14,9 +14,9 @@ class App {
 
     int loop();
     void check_connection();
+    void init_tray();
 
    private:
-    static void init_tray();
     void init_interfaces();
     void update_interfaces(bool enable);
     void stop_sshd();

@@ -206,7 +206,6 @@ void App::check_connection() {
 }
 
 App::App(const char *port) : connected(std::nullopt), port(port), current(-1) {
-    init_tray();
     init_interfaces();
     stop_sshd();
 }
@@ -222,6 +221,8 @@ int main(const int argc, const char *argv[]) {
     for (size_t i = 2; i < argc; ++i) {
         app.add_host(argv[i]);
     }
+
+    app.init_tray();
 
     auto last_time = std::chrono::system_clock::now();
 

@@ -2,10 +2,6 @@
 #include <string.h>
 #include "app.hpp"
 
-#if !__has_feature(objc_arc)
-#error "ARC is off"
-#endif
-
 @interface AppDelegate : NSObject <NSApplicationDelegate>
 - (IBAction)menuCallback:(id)sender;
 @end
@@ -18,9 +14,12 @@
 }
 @end
 
-static NSApplication* app;
-static NSStatusBar* statusBar;
-static NSStatusItem* statusItem;
+static NSApplication* app = NULL;
+static NSStatusBar* statusBar = NULL;
+static NSStatusItem* statusItem = NULL;
+static NSMenu* menu = NULL;
+static NSMenuItem* header = NULL;
+static std::vector<NSMenuItem*> menuItems;
 
 void App::init_tray() {
     AppDelegate* delegate = [[AppDelegate alloc] init];
@@ -29,6 +28,33 @@ void App::init_tray() {
     statusBar = [NSStatusBar systemStatusBar];
     statusItem = [statusBar statusItemWithLength:NSVariableStatusItemLength];
     [app activateIgnoringOtherApps:TRUE];
+
+    menu = [[NSMenu alloc] init];
+    [menu setAutoenablesItems:FALSE];
+
+    header =
+        [[NSMenuItem alloc] initWithTitle:connected.has_value() ? @"Connected" : @"Disconnected"
+                                   action:@selector(menuCallback:)
+                            keyEquivalent:@""];
+    [header setEnabled:FALSE];
+    [header setState:0];
+
+    [menu addItem:header];
+    [menu addItem:[NSMenuItem separatorItem]];
+
+    for (size_t i = 0; i < hosts.size(); ++i) {
+        auto& host = hosts[i];
+        NSMenuItem* menuItem =
+            [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:host]
+                                       action:@selector(menuCallback:)
+                                keyEquivalent:@""];
+        [menuItem setEnabled:TRUE];
+        [menuItem setState:FALSE];
+        [menuItem setRepresentedObject:[NSValue valueWithPointer:(void*)i]];
+        menuItems.push_back(menuItem);
+        [menu addItem:menuItem];
+    }
+    [statusItem setMenu:menu];
 }
 
 int App::loop() {
@@ -38,11 +64,13 @@ int App::loop() {
         }
 
         NSDate* until = [NSDate dateWithTimeIntervalSinceNow:30];
+        [until autorelease];
         NSEvent* event =
             [app nextEventMatchingMask:ULONG_MAX
                              untilDate:until
                                 inMode:[NSString stringWithUTF8String:"kCFRunLoopDefaultMode"]
                                dequeue:TRUE];
+
         if (event) {
             [app sendEvent:event];
         }
@@ -55,29 +83,10 @@ int App::update() {
 
     size_t connected_id = connected.value_or(-1);
 
-    NSMenu* menu = [[NSMenu alloc] init];
-    [menu setAutoenablesItems:FALSE];
-    NSMenuItem* header =
-        [[NSMenuItem alloc] initWithTitle:connected.has_value() ? @"Connected" : @"Disconnected"
-                                   action:@selector(menuCallback:)
-                            keyEquivalent:@""];
-    [header setEnabled:FALSE];
-    [header setState:0];
-    [menu addItem:header];
-    [menu addItem:[NSMenuItem separatorItem]];
-
     for (size_t i = 0; i < hosts.size(); ++i) {
-        auto& host = hosts[i];
         int checked = i == connected_id;
-        NSMenuItem* menuItem =
-            [[NSMenuItem alloc] initWithTitle:[NSString stringWithUTF8String:host]
-                                       action:@selector(menuCallback:)
-                                keyEquivalent:@""];
-        [menuItem setEnabled:TRUE];
-        [menuItem setState:checked];
-        [menuItem setRepresentedObject:[NSValue valueWithPointer:(void*)i]];
-        [menu addItem:menuItem];
+        [menuItems[i] setState:checked];
     }
-    [statusItem setMenu:menu];
+
     return 0;
 }
