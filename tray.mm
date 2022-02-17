@@ -32,10 +32,9 @@ void App::init_tray() {
     menu = [[NSMenu alloc] init];
     [menu setAutoenablesItems:FALSE];
 
-    header =
-        [[NSMenuItem alloc] initWithTitle:connected.has_value() ? @"Connected" : @"Disconnected"
-                                   action:@selector(menuCallback:)
-                            keyEquivalent:@""];
+    header = [[NSMenuItem alloc] initWithTitle:@"Disconnected"
+                                        action:@selector(menuCallback:)
+                                 keyEquivalent:@""];
     [header setEnabled:FALSE];
     [header setState:0];
 
@@ -55,31 +54,33 @@ void App::init_tray() {
         [menu addItem:menuItem];
     }
     [statusItem setMenu:menu];
+    update();
 }
 
 int App::loop() {
-    @autoreleasepool {
-        if (int ret = update()) {
-            return ret;
-        }
-
-        NSDate* until = [NSDate dateWithTimeIntervalSinceNow:30];
-        [until autorelease];
-        NSEvent* event =
-            [app nextEventMatchingMask:ULONG_MAX
-                             untilDate:until
-                                inMode:[NSString stringWithUTF8String:"kCFRunLoopDefaultMode"]
-                               dequeue:TRUE];
-
-        if (event) {
-            [app sendEvent:event];
-        }
+    if (int ret = update()) {
+        return ret;
     }
+
+    NSDate* until = [NSDate dateWithTimeIntervalSinceNow:30];
+
+    NSEvent* event =
+        [app nextEventMatchingMask:ULONG_MAX
+                         untilDate:until
+                            inMode:[NSString stringWithUTF8String:"kCFRunLoopDefaultMode"]
+                           dequeue:TRUE];
+
+    if (event) {
+        [app sendEvent:event];
+    }
+    [until release];
+
     return 0;
 }
 
 int App::update() {
     statusItem.button.title = connected.has_value() ? @"〶" : @"〒";
+    header.title = connected.has_value() ? @"Connected" : @"Disconnected";
 
     size_t connected_id = connected.value_or(-1);
 
