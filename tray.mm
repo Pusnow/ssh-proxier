@@ -23,7 +23,7 @@ static NSMenu* menu = NULL;
 static NSMenuItem* header = NULL;
 static std::vector<NSMenuItem*> menuItems;
 
-void App::init_tray() {
+void App::init_objcxx() {
     AppDelegate* delegate = [[AppDelegate alloc] init];
     app = [NSApplication sharedApplication];
     [app setDelegate:delegate];
@@ -61,11 +61,16 @@ void App::init_tray() {
     AuthorizationFlags flags = 0;
     auto authRet = AuthorizationCreate(NULL, NULL, flags, &authRef);
     printf("authRet %d\n", authRet);
-    CommonAuthorization.shared.setupAuthorizationRights(authRef);
+    ;
 
     CFStringRef a = (CFStringRef) @"sshproxier";
-    SCPreferencesRef prefs = SCPreferencesCreateWithAuthorization(NULL, a, NULL, authRef);
+    SCPreferencesRef prefs = SCPreferencesCreate(NULL, a, NULL);
+    NSDictionary* services = (NSDictionary*)SCPreferencesGetValue(prefs, kSCPrefNetworkServices);
     printf("prefs: %p\n", prefs);
+    for (NSString* key in services) {
+        id value = services[key];
+        NSLog(@"Value: %@ for key: %@", value, key);
+    }
     auto aa = SCPreferencesCopyKeyList(prefs);
     auto sz = CFArrayGetCount(aa);
     for (auto i = 0; i < sz; ++i) {
