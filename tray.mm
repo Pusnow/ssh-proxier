@@ -1,5 +1,4 @@
 #include <Cocoa/Cocoa.h>
-#include <Security/Security.h>
 #include <SystemConfiguration/SystemConfiguration.h>
 #include <string.h>
 #include "app.hpp"

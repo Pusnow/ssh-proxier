@@ -10,6 +10,5 @@ add_executable(ssh-proxier main.cpp tray.mm)
 
 find_library(COCOA Cocoa REQUIRED)
 find_library(SC SystemConfiguration REQUIRED)
-find_library(SECURITY Security REQUIRED)
 
-target_link_libraries(ssh-proxier ${COCOA} ${SC} ${SECURITY})
+target_link_libraries(ssh-proxier ${COCOA} ${SC})
