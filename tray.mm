@@ -57,26 +57,24 @@ void App::init_objcxx() {
     }
     [statusItem setMenu:menu];
     update();
-    AuthorizationRef authRef;
-    AuthorizationFlags flags = 0;
-    auto authRet = AuthorizationCreate(NULL, NULL, flags, &authRef);
-    printf("authRet %d\n", authRet);
-    ;
+}
 
-    CFStringRef a = (CFStringRef) @"sshproxier";
-    SCPreferencesRef prefs = SCPreferencesCreate(NULL, a, NULL);
+void App::update_interfaces(bool enable) {
+    SCPreferencesRef prefs = SCPreferencesCreate(NULL, (CFStringRef) @"sshproxier", NULL);
     NSDictionary* services = (NSDictionary*)SCPreferencesGetValue(prefs, kSCPrefNetworkServices);
-    printf("prefs: %p\n", prefs);
+
     for (NSString* key in services) {
-        id value = services[key];
-        NSLog(@"Value: %@ for key: %@", value, key);
-    }
-    auto aa = SCPreferencesCopyKeyList(prefs);
-    auto sz = CFArrayGetCount(aa);
-    for (auto i = 0; i < sz; ++i) {
-        CFStringRef entry = (CFStringRef)CFArrayGetValueAtIndex(aa, i);
-        const char* entry_str = CFStringGetCStringPtr(entry, kCFStringEncodingMacRoman);
-        printf("entry: %s\n", entry_str);
+        id interface_id = services[key][@"Interface"][@"UserDefinedName"];
+        id proxies = services[key][@"Proxies"];
+        id enabled_id = proxies[@"SOCKSEnable"];
+        id server_id = proxies[@"SOCKSProxy"];
+        id port_id = proxies[@"SOCKSPort"];
+        int enabled = [enabled_id intValue];
+        const char* interface = [interface_id UTF8String];
+        const char* server = [server_id UTF8String];
+        int port = [port_id intValue];
+
+        update_interface(enable, enabled, interface, server, port);
     }
 }
 

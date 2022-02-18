@@ -4,10 +4,14 @@
 #include <string>
 #include <vector>
 
+static void trim_string(std::string &str) {
+    str.erase(0, str.find_first_not_of(" "));
+    str.erase(str.find_last_not_of(" ") + 1);
+}
+
 class App {
    public:
-    static void init_instance(const char *port,
-                              const std::vector<const char *> &&hosts,
+    static void init_instance(int port, const std::vector<const char *> &&hosts,
                               const std::vector<const char *> &&bypasses);
     static App &get_instance() { return *inner; }
     void menu_handler(size_t id);
@@ -19,18 +23,18 @@ class App {
     void init_objcxx();
 
    private:
-    void init_interfaces();
     void update_interfaces(bool enable);
+    void update_interface(bool enable, bool enabled, const char *interface,
+                          const char *server, int port);
     void stop_sshd();
     bool start_sshd(size_t id);
-    App(const char *port, const std::vector<const char *> &&hosts,
+    App(int port, const std::vector<const char *> &&hosts,
         const std::vector<const char *> &&bypasses);
     static std::unique_ptr<App> inner;
     std::optional<size_t> connected;
     int update();
-    const char *port;
+    const int port;
     size_t current;
     const std::vector<const char *> hosts;
-    std::vector<std::string> interfaces;
     const std::vector<const char *> bypasses;
 };
