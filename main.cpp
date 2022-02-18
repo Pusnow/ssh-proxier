@@ -93,7 +93,11 @@ struct InterfaceInfo {
 };
 
 std::unique_ptr<App> App::inner;
-void App::init_instance(const char *port) { App::inner.reset(new App(port)); }
+void App::init_instance(const char *port,
+                        const std::vector<const char *> &&hosts,
+                        const std::vector<const char *> &&bypasses) {
+    App::inner.reset(new App(port, std::move(hosts), std::move(bypasses)));
+}
 
 void App::init_interfaces() {
     auto result = exec("networksetup -listallnetworkservices");
@@ -220,7 +224,14 @@ void App::check_connection() {
     }
 }
 
-App::App(const char *port) : connected(std::nullopt), port(port), current(-1) {
+App::App(const char *port, const std::vector<const char *> &&hosts,
+         const std::vector<const char *> &&bypasses)
+    : connected(std::nullopt),
+      port(port),
+      current(-1),
+      hosts(hosts),
+      bypasses(bypasses) {
+    init_objcxx();
     init_interfaces();
     stop_sshd();
 }
@@ -237,21 +248,24 @@ int main(const int argc, const char *argv[]) {
     for (int i = 0; i < argc; ++i) {
         if (separator_str == argv[i]) {
             last_host = i;
+            break;
         }
     }
 
-    App::init_instance(argv[1]);
-    auto &app = App::get_instance();
+    std::vector<const char *> hosts;
+    std::vector<const char *> interfaces;
+
     for (size_t i = 2; i < last_host; ++i) {
-        app.add_host(argv[i]);
+        hosts.push_back(argv[i]);
     }
-    app.add_bypass("*.local");
-    app.add_bypass("169.254/16");
+    interfaces.push_back("*.local");
+    interfaces.push_back("169.254/16");
     for (size_t i = last_host + 1; i < argc; ++i) {
-        app.add_bypass(argv[i]);
+        interfaces.push_back(argv[i]);
     }
 
-    app.init_tray();
+    App::init_instance(argv[1], std::move(hosts), std::move(interfaces));
+    auto &app = App::get_instance();
 
     auto last_time = std::chrono::system_clock::now();
 
