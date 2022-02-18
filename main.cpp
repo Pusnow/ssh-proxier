@@ -144,6 +144,20 @@ void App::menu_handler(size_t menu_id) {
     }
 }
 
+void App::setup_bypass(const char *interface) {
+    const size_t sz = bypasses.size();
+    if (!sz) return;
+
+    std::string str(bypasses[0]);
+    for (size_t i = 1; i < sz; ++i) {
+        str += " ";
+        str += bypasses[i];
+    }
+    exec(do_snprintf("networksetup -setproxybypassdomains %s %s", interface,
+                     str.c_str())
+             .c_str());
+}
+
 void App::update_interfaces(bool enable) {
     for (auto &interface : interfaces) {
         auto info = InterfaceInfo::retrieve(interface);
@@ -158,6 +172,7 @@ void App::update_interfaces(bool enable) {
                                      "\"%s\" 127.0.0.1 %s off",
                                      interface.c_str(), port)
                              .c_str());
+                    setup_bypass(interface.c_str());
                 }
 
             } else {
@@ -210,16 +225,30 @@ App::App(const char *port) : connected(std::nullopt), port(port), current(-1) {
     stop_sshd();
 }
 
+static constexpr std::string_view separator_str = "--";
 int main(const int argc, const char *argv[]) {
     if (argc < 3) {
         printf("Usage: %s [port_number] [host_name] ...", argv[0]);
         return 1;
     }
 
+    int last_host = argc;
+
+    for (int i = 0; i < argc; ++i) {
+        if (separator_str == argv[i]) {
+            last_host = i;
+        }
+    }
+
     App::init_instance(argv[1]);
     auto &app = App::get_instance();
-    for (size_t i = 2; i < argc; ++i) {
+    for (size_t i = 2; i < last_host; ++i) {
         app.add_host(argv[i]);
+    }
+    app.add_bypass("*.local");
+    app.add_bypass("169.254/16");
+    for (size_t i = last_host + 1; i < argc; ++i) {
+        app.add_bypass(argv[i]);
     }
 
     app.init_tray();
