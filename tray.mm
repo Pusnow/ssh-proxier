@@ -1,4 +1,6 @@
 #include <Cocoa/Cocoa.h>
+#include <Security/Security.h>
+#include <SystemConfiguration/SystemConfiguration.h>
 #include <string.h>
 #include "app.hpp"
 
@@ -21,7 +23,7 @@ static NSMenu* menu = NULL;
 static NSMenuItem* header = NULL;
 static std::vector<NSMenuItem*> menuItems;
 
-void App::init_tray() {
+void App::init_objcxx() {
     AppDelegate* delegate = [[AppDelegate alloc] init];
     app = [NSApplication sharedApplication];
     [app setDelegate:delegate];
@@ -55,6 +57,27 @@ void App::init_tray() {
     }
     [statusItem setMenu:menu];
     update();
+}
+
+void App::update_interfaces(bool enable) {
+    SCPreferencesRef prefs = SCPreferencesCreate(NULL, (CFStringRef) @"sshproxier", NULL);
+    NSDictionary* services = (NSDictionary*)SCPreferencesGetValue(prefs, kSCPrefNetworkServices);
+
+    for (NSString* key in services) {
+        id interface_id = services[key][@"Interface"][@"UserDefinedName"];
+        id proxies = services[key][@"Proxies"];
+        id enabled_id = proxies[@"SOCKSEnable"];
+        id server_id = proxies[@"SOCKSProxy"];
+        id port_id = proxies[@"SOCKSPort"];
+        int enabled = [enabled_id intValue];
+        const char* interface = [interface_id UTF8String];
+        const char* server = [server_id UTF8String];
+        int port = [port_id intValue];
+
+        update_interface(enable, enabled, interface, server, port);
+    }
+
+    [prefs release];  // why warning?
 }
 
 int App::loop() {
