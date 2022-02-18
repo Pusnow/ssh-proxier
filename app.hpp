@@ -11,6 +11,8 @@ class App {
     void menu_handler(size_t id);
 
     void add_host(const char *host) { hosts.push_back(host); }
+    void add_bypass(const char *bypass) { bypasses.push_back(bypass); }
+    void setup_bypass(const char *interface);
 
     int loop();
     void check_connection();
@@ -29,4 +31,5 @@ class App {
     size_t current;
     std::vector<const char *> hosts;
     std::vector<std::string> interfaces;
+    std::vector<const char *> bypasses;
 };
