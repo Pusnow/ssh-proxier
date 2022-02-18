@@ -73,8 +73,41 @@ void App::update_interfaces(bool enable) {
         const char* interface = [interface_id UTF8String];
         const char* server = [server_id UTF8String];
         int port = [port_id intValue];
+        NSDictionary* update_dic = nil;
+        if (enable) {
+            if (!enabled || LOCAL_HOST != server || port != this->port) {
+                update_dic = @{
+                    @"SOCKSEnable" : @1,
+                    @"SOCKSProxy" : @"127.0.0.1",
+                    @"SOCKSPort" : [NSNumber numberWithInt:this->port],
+                };
+                // exec(do_snprintf("networksetup -setsocksfirewallproxy "
+                //                  "\"%s\" 127.0.0.1 %d off",
+                //                  interface, port)
+                //          .c_str());
+                // setup_bypass(interface);
+            }
 
-        update_interface(enable, enabled, interface, server, port);
+        } else {
+            // disable
+            if (enabled) {
+                update_dic = @{
+                    @"SOCKSEnable" : @0,
+                };
+            }
+        }
+        if (update_dic != nil) {
+            NSString* str = [NSString
+                stringWithFormat:@"/%@/%@/%@", kSCPrefNetworkServices, key, kSCEntNetProxies];
+            NSLog(@"str:%@\n", str);
+            SCPreferencesPathSetValue(prefs, (__bridge CFStringRef)str,
+                                      (__bridge CFDictionaryRef)update_dic);
+
+            SCPreferencesCommitChanges(prefs);
+            SCPreferencesApplyChanges(prefs);
+            SCPreferencesSynchronize(prefs);
+            NSLog(@"Done");
+        }
     }
 
     [prefs release];  // why warning?

@@ -4,6 +4,8 @@
 #include <string>
 #include <vector>
 
+constexpr std::string_view LOCAL_HOST("127.0.0.1");
+
 static void trim_string(std::string &str) {
     str.erase(0, str.find_first_not_of(" "));
     str.erase(str.find_last_not_of(" ") + 1);

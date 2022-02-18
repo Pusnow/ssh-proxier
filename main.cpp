@@ -7,7 +7,6 @@
 #include "app.hpp"
 
 constexpr size_t EXEC_BUFFER_SIZE = 128;
-constexpr std::string_view LOCAL_HOST("127.0.0.1");
 
 static std::optional<std::string> exec(const char *cmd) {
     std::array<char, EXEC_BUFFER_SIZE> buffer;
