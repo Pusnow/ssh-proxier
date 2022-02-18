@@ -4,11 +4,6 @@
 #include <string>
 #include <vector>
 
-static void trim_string(std::string &str) {
-    str.erase(0, str.find_first_not_of(" "));
-    str.erase(str.find_last_not_of(" ") + 1);
-}
-
 class App {
    public:
     static void init_instance(int port, const std::vector<const char *> &&hosts,
