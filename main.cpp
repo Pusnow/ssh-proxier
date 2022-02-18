@@ -82,9 +82,9 @@ void App::setup_bypass(const char *interface) {
 }
 
 void App::update_interface(bool enable, bool enabled, const char *interface,
-                           const char *server, int port) {
+                           const char *server, int port_before) {
     if (enable) {
-        if (!enabled || LOCAL_HOST != server || port != this->port) {
+        if (!enabled || LOCAL_HOST != server || port_before != port) {
             exec(do_snprintf("networksetup -setsocksfirewallproxy "
                              "\"%s\" 127.0.0.1 %d off",
                              interface, port)
