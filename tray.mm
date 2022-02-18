@@ -1,4 +1,6 @@
 #include <Cocoa/Cocoa.h>
+#include <Security/Security.h>
+#include <SystemConfiguration/SystemConfiguration.h>
 #include <string.h>
 #include "app.hpp"
 
@@ -55,6 +57,22 @@ void App::init_tray() {
     }
     [statusItem setMenu:menu];
     update();
+    AuthorizationRef authRef;
+    AuthorizationFlags flags = 0;
+    auto authRet = AuthorizationCreate(NULL, NULL, flags, &authRef);
+    printf("authRet %d\n", authRet);
+    CommonAuthorization.shared.setupAuthorizationRights(authRef);
+
+    CFStringRef a = (CFStringRef) @"sshproxier";
+    SCPreferencesRef prefs = SCPreferencesCreateWithAuthorization(NULL, a, NULL, authRef);
+    printf("prefs: %p\n", prefs);
+    auto aa = SCPreferencesCopyKeyList(prefs);
+    auto sz = CFArrayGetCount(aa);
+    for (auto i = 0; i < sz; ++i) {
+        CFStringRef entry = (CFStringRef)CFArrayGetValueAtIndex(aa, i);
+        const char* entry_str = CFStringGetCStringPtr(entry, kCFStringEncodingMacRoman);
+        printf("entry: %s\n", entry_str);
+    }
 }
 
 int App::loop() {
