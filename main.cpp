@@ -199,14 +199,20 @@ bool App::start_sshd(size_t id) {
     return result.has_value();
 }
 
-void App::check_connection() {
-    if (!connected.has_value()) return;
-
+bool App::check_connection() {
     auto result = exec(
         do_snprintf("nc -z -x 127.0.0.1:%s 127.0.0.1 22 >/dev/null 2>&1", port)
             .c_str());
 
-    if (result.has_value()) return;
+    if (result.has_value())
+        return true;
+    else
+        return false;
+}
+
+void App::check_connection_and_reconnect() {
+    if (!connected.has_value()) return;
+    if (check_connection()) return;
 
     // reconnect
     stop_sshd();
@@ -262,7 +268,7 @@ int main(const int argc, const char *argv[]) {
 
         if (diff > std::chrono::minutes(1)) {
             last_time = this_time;
-            app.check_connection();
+            app.check_connection_and_reconnect();
         }
     }
 

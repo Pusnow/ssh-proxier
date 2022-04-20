@@ -15,7 +15,8 @@ class App {
     void setup_bypass(const char *interface);
 
     int loop();
-    void check_connection();
+    void check_connection_and_reconnect();
+    bool check_connection();
     void init_tray();
 
    private:
