@@ -9,5 +9,6 @@ set(CMAKE_CXX_STANDARD 20)
 add_executable(ssh-proxier main.cpp tray.mm)
 
 find_library(COCOA Cocoa REQUIRED)
+find_library(SC SystemConfiguration REQUIRED)
 
-target_link_libraries(ssh-proxier ${COCOA})
+target_link_libraries(ssh-proxier ${COCOA} ${SC})
