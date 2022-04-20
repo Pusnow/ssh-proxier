@@ -1,4 +1,7 @@
 #pragma once
+
+#include <netinet/in.h>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -34,4 +37,6 @@ class App {
     size_t current;
     const std::vector<const char *> hosts;
     const std::vector<const char *> bypasses;
+
+    const struct sockaddr_in socks_addr;
 };
