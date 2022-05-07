@@ -1,3 +1,9 @@
+
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
+
 #include <array>
 #include <chrono>
 #include <cstdio>
@@ -5,6 +11,19 @@
 #include <sstream>
 
 #include "app.hpp"
+
+#define SSH_PORT 22
+
+// from https://github.com/apple-oss-distributions/netcat/blob/netcat-50/socks.c
+#define SOCKS_V5 5
+#define SOCKS_V4 4
+#define SOCKS_NOAUTH 0
+#define SOCKS_NOMETHOD 0xff
+#define SOCKS_CONNECT 1
+#define SOCKS_IPV4 1
+#define SOCKS_DOMAIN 3
+#define SOCKS_IPV6 4
+// end socks.c
 
 constexpr size_t EXEC_BUFFER_SIZE = 128;
 constexpr std::string_view LOCAL_HOST("127.0.0.1");
@@ -113,14 +132,82 @@ bool App::start_sshd(size_t id) {
     return result.has_value();
 }
 
-void App::check_connection() {
+static ssize_t write_all(int fd, const unsigned char *buffer, size_t len) {
+    ssize_t written = 0;
+
+    while (written < len) {
+        ssize_t this_write = write(fd, buffer + written, len - written);
+        if (this_write < 0) return -1;
+        if (this_write == 0) return written;
+        written += this_write;
+    }
+    return written;
+}
+
+static ssize_t read_all(int fd, unsigned char *buffer, size_t len) {
+    ssize_t read_ = 0;
+
+    while (read_ < len) {
+        ssize_t this_read = read(fd, buffer + read_, len - read_);
+        if (this_read < 0) return -1;
+        if (this_read == 0) return read_;
+        read_ += this_read;
+    }
+    return read_;
+}
+
+static const unsigned char socks_negotiation_cmd[3] = {
+    SOCKS_V5,
+    1,
+    SOCKS_NOAUTH,
+};
+static const unsigned char socks_ssh_check_cmd[10] = {
+    SOCKS_V5, SOCKS_CONNECT, 0, SOCKS_IPV4, 127, 0, 0, 1, 0, SSH_PORT,
+};
+
+bool App::check_connection() {
+    // nc -z -x 127.0.0.1:%s 127.0.0.1 22
+
+    using defer_t = std::shared_ptr<void>;
+
+    int socks_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
+
+    if (socks_fd == -1) return false;
+
+    defer_t _defered_socks_fd_close(nullptr,
+                                    std::bind([=] { close(socks_fd); }));
+
+    int ret = 0;
+    ret = connect(socks_fd, (const struct sockaddr *)&socks_addr,
+                  sizeof(socks_addr));
+
+    if (ret < 0) return false;
+
+    // testing socks5
+    // https://github.com/apple-oss-distributions/netcat/blob/netcat-50/socks.c
+
+    unsigned char buf[10];
+
+    ret = write_all(socks_fd, socks_negotiation_cmd, 3);
+    if (ret != 3) return false;
+    ret = read_all(socks_fd, buf, 2);
+    if (ret != 2) return false;
+
+    if (buf[1] == SOCKS_NOMETHOD) return false;
+
+    ret = write_all(socks_fd, socks_ssh_check_cmd, 10);
+    if (ret != 10) return false;
+    ret = read_all(socks_fd, buf, 10);
+    if (ret != 10) return false;
+
+    if (buf[1] != 0) return false;
+
+    return true;
+}
+
+void App::check_connection_and_reconnect() {
     if (!connected.has_value()) return;
-
-    auto result = exec(
-        do_snprintf("nc -z -x 127.0.0.1:%d 127.0.0.1 22 >/dev/null 2>&1", port)
-            .c_str());
-
-    if (result.has_value()) return;
+    if (check_connection()) return;
 
     // reconnect
     stop_sshd();
@@ -140,7 +227,17 @@ App::App(int port, const std::vector<const char *> &&hosts,
       port(port),
       current(-1),
       hosts(hosts),
-      bypasses(bypasses) {
+      bypasses(bypasses),
+      socks_addr({.sin_family = AF_INET,
+                  .sin_port = htons(port),
+                  .sin_addr =
+                      {
+                          .s_addr = 0x100007F,
+                      }
+
+      })
+
+{
     init_objcxx();
     stop_sshd();
     update_interfaces(false);
@@ -187,7 +284,7 @@ int main(const int argc, const char *argv[]) {
 
         if (diff > std::chrono::minutes(1)) {
             last_time = this_time;
-            app.check_connection();
+            app.check_connection_and_reconnect();
         }
     }
 

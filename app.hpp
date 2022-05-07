@@ -1,4 +1,7 @@
 #pragma once
+
+#include <netinet/in.h>
+
 #include <memory>
 #include <optional>
 #include <string>
@@ -14,7 +17,9 @@ class App {
     void setup_bypass(const char *interface);
 
     int loop();
-    void check_connection();
+
+    void check_connection_and_reconnect();
+    bool check_connection();
     void init_objcxx();
 
    private:
@@ -32,4 +37,6 @@ class App {
     size_t current;
     const std::vector<const char *> hosts;
     const std::vector<const char *> bypasses;
+
+    const struct sockaddr_in socks_addr;
 };
