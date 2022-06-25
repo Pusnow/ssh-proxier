@@ -76,7 +76,7 @@ void App::update_interfaces(bool enable) {
         update_interface(enable, enabled, interface, server, port);
     }
 
-    [prefs release];  // why warning?
+    CFRelease(prefs);
 }
 
 int App::loop() {
